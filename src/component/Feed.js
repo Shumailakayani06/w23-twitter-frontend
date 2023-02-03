@@ -1,9 +1,7 @@
-import { Link } from "react-router-dom";
-import { getTweets } from "../services/tweets";
-import { formatDistance} from 'date-fns';
-import { FcPortraitMode } from "react-icons/fc";
-
-const { Component } = require("react");
+import { Component } from "react";
+import {  createTweet, getTweets } from "../services/tweets";
+import ErrorMessage from "./ErrorMessage";
+import Tweet from "./Tweet";
 
 class Feed extends Component {
   constructor(props) {
@@ -11,79 +9,98 @@ class Feed extends Component {
 
     this.state = {
       tweets: [],
+      isLoading: true,
       error: null,
-      message: "",
-      newTweetText: '',
-    };
+      newTweetText:'',
+    }
   }
 
   handleChangeNewTweetText(event) {
     this.setState({
       newTweetText: event.target.value
-    })
+    });
   }
 
-  handleSubmitNewTweet(){
- this.setState({newTweetText: ''})
+  async handleSubmitNewTweet() {
+    const { newTweetText } = this.state;
+    
+    await createTweet(newTweetText);
 
-
+    
+    this.setState({ newTweetText: '' });
+    
+   
+    this.handlePopulateTweets();
   }
 
   async componentDidMount() {
-    await this.Tweets();
+    await this.handlePopulateTweets();
   }
 
-  async Tweets() {
+  async handlePopulateTweets() {
+    this.setState({
+      isLoading: true,
+      error: null,
+    });
+    
     try {
       const tweets = await getTweets();
+    
       this.setState({
-        tweets: tweets,
+        tweets,
+        isLoading: false
       });
     } catch (error) {
-      this.setState({ error });
+      this.setState({
+        error: error
+      })
     }
   }
-  render() {
-    const { tweets, error } = this.state;
-    const elements = tweets.map(({ id, message, name, username,created_at }) => {
-      const dateToRender = formatDistance
-      (new Date(created_at), new Date(), { addSuffix: true })
 
-      const stylesForName = {
-        fontSize: "20px",
-        fontWeight: "bold",
-        textDecoration:"none",
-        color: "grey"
-      }
+  render() {
+    const { error, isLoading, tweets, newTweetText } = this.state;
+
+    if (error) {
       return (
-        <div key={id}  className="feed-card">
-          <div><FcPortraitMode className="profile-icon"/></div>
-          <div>
-          <p><Link style={stylesForName} to={"/user/:username"}>{name} </Link><Link to={"/user/:username"}> @{username} </Link> - {dateToRender}</p>
-          <p>{message}</p>
-          </div>
-        </div>
+        <ErrorMessage
+          message={error.message}
+          onRetry={this.handlePopulateTweets.bind(this)}
+        />
       );
+    }
+
+    if (isLoading) {
+      return (
+        <div>Loading tweets...</div>
+      );
+    }
+
+    const tweetElements = tweets
+    .map((tweet) => {
+      return <Tweet tweetInfo={tweet} />
     });
 
     return (
-     <div>
-       <div>
-       <label>
-        write new tweet:
-        <textarea rows="3"
-         value={this.state.newTweetText}
-          onChange={this.handleChangeNewTweetText.bind(this)}
-          ></textarea>
-      </label>
-      <button onClick={this.handleSubmitNewTweet.bind(this)}>submit twitt</button>
+      <div>
+        <h1>Feed</h1>
+        <div>
+          <label>
+            Write a new tweet:
+            <div>
+              <textarea
+                rows="3"
+                value={newTweetText}
+                onChange={this.handleChangeNewTweetText.bind(this)} />
+            </div>
+          </label>
+          <button onClick={this.handleSubmitNewTweet.bind(this)}>
+            Submit tweet
+          </button>
+        </div>
+        <div>{tweetElements}</div>
       </div>
-      {elements}
-     </div>
     );
   }
 }
 
 export default Feed;
-
-//return <Tweet tweetInfo={tweet}/>

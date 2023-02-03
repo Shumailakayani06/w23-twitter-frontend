@@ -1,5 +1,9 @@
-// import { formatDistance} from 'date-fns'
+import { formatDistance } from "date-fns";
 
-// export function getFormattedDate(date) {
-//     return formatDistance(new Date(), new Date(), { addSuffix: true })
-// }
+export function getFormattedTime(date) {
+    return formatDistance(
+      new Date(date),
+      new Date(),
+      { addSuffix: true }
+    );
+  }

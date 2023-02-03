@@ -1,78 +1,76 @@
-import { formatDistance} from 'date-fns';
-import { getTweetsByUsername } from '../services/tweets';
-import { Link } from 'react-router-dom';
-import { FcPortraitMode } from "react-icons/fc";
-
-const { Component } = require("react");
+import { Component } from "react";
+import { getTweetsByUsername } from "../services/tweets";
+import Tweet from "./Tweet";
 
 class UserFeed extends Component {
-  constructor(props){
+  constructor(props) {
     super(props);
 
     this.state = {
-        tweets: [],
-        error: null,
+      tweets: [],
+      isLoading: true,
+      error: null,
     }
   }
 
-  async componentDidMount(){
-    await this.Tweets();
+  async componentDidMount() {
+    await this.handlePopulateTweets();
   }
 
-  async Tweets(){
-    const {username} = this.props.match.params;
+  async handlePopulateTweets() {
+    const { username } = this.props.match.params;
 
-    try{
-        const tweets = await getTweetsByUsername(username);
-        this.setState({
-            tweets: tweets,
-        })
-    }catch(error){
-     this.setState({error});
+    this.setState({
+      isLoading: true,
+      error: null,
+    });
+    
+    try {
+      const tweets = await getTweetsByUsername(username);
+    
+      this.setState({
+        tweets,
+        isLoading: false
+      });
+    } catch (error) {
+      this.setState({
+        error: error
+      })
     }
   }
+
   render() {
     const { username } = this.props.match.params;
-    
-    const {tweets, error} = this.state;
-    
-    const elements = tweets.map(({
-        id,
-        message,
-        name,
-        username,
-        created_at,
-       
-    }) =>{
-      
-      const dateToRender = formatDistance
-      (new Date(created_at), new Date(), { addSuffix: true })
+    const { error, isLoading, tweets } = this.state;
 
-        const stylesForName = {
-          fontSize: "20px",
-          fontWeight: "bold",
-          textDecoration:"none",
-          color: "grey"
-        }
-        return (
-          <div key={id}  className="feed-card">
-          <div><FcPortraitMode className="profile-icon"/></div>
-          <div>
-          <p><Link style={stylesForName} to={"/user/${username}"}>{name} </Link><Link to={"/user/${username}"}> @{username} </Link> - {dateToRender}</p>
-          <p>Message : {message}</p>
-          </div>
-        </div>
-          );
-    })
-
-
-    return(
+    if (error) {
+      return (
         <div>
-        <div>User Feed for @{username}</div>
-        <div>{elements}</div>
+          <h3>Unable to fetch tweets: {error.message}</h3>
+          <button onClick={this.handlePopulateTweets.bind(this)}>
+            Retry
+          </button>
         </div>
-    )
-    
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <div>Loading tweets...</div>
+      );
+    }
+
+    const tweetElements = tweets
+    .map((tweet) => {
+      return <Tweet tweetInfo={tweet} />
+    });
+
+    return (
+      <div>
+        <h1>UserFeed for @{username}</h1>
+        <div>{tweetElements}</div>
+      </div>
+    );
   }
 }
 
